@@ -24,7 +24,22 @@
       "Bash(mkdir -p /c/Users/wanqinz567/.ssh)",
       "Read(//c/Users//**)",
       "Bash(ssh-keyscan github.com)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(gh auth *)",
+      "WebSearch",
+      "Bash(GIT_SSH_COMMAND='ssh -o UserKnownHostsFile=/tmp/known_hosts -i \"/c/Users/张wan/.ssh/id_ed25519\"' git ls-remote *)",
+      "Bash(echo \"---EXIT:$?\")",
+      "Bash(sort -u -o /tmp/known_hosts /tmp/known_hosts)",
+      "Bash(chmod +x /usr/local/bin/ssh)",
+      "Bash(chmod +x \"/c/Users/张wan/bin/ssh\")",
+      "Bash(\"/c/Users/张wan/bin/ssh\" -T git@github.com)",
+      "Bash(gh api *)",
+      "Bash(curl -s https://api.github.com/repos/forrestchang/anderj-karpathy-skills)",
+      "Bash(env)",
+      "Bash(ssh-keygen *)",
+      "Bash(ssh-agent -s)",
+      "Bash(ssh-add __TRACKED_VAR__/.ssh/id_ed25519)",
+      "Bash(clip.exe)"
     ]
   }
 }
