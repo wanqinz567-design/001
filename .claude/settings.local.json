@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Start-Process \"D:\\\\文档\\\\cc new\\\\pomodoro.html\")",
+      "PowerShell(winget install *)",
+      "PowerShell(git *)",
+      "PowerShell(git config *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(New-Item *)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); ssh -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); ssh -T git@github.com 2>&1)",
+      "PowerShell(Get-Service *)",
+      "PowerShell(Set-Service *)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); ssh -vT git@github.com 2>&1 | Select-String -Pattern \"key|auth|identity|Offering|Accepted|denied\" -SimpleMatch)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); ssh -vvv -o ConnectTimeout=10 -T git@github.com 2>&1)",
+      "PowerShell(Get-Content *)",
+      "Bash(git config *)",
+      "Read(//c/Users/张wan/.ssh/**)",
+      "Bash(ssh *)",
+      "Bash(ssh-keyscan *)",
+      "Bash(git *)",
+      "Bash(cmd.exe *)",
+      "Bash(iconv -f gbk -t utf-8)",
+      "Bash(mkdir -p /c/Users/wanqinz567/.ssh)",
+      "Read(//c/Users//**)",
+      "Bash(ssh-keyscan github.com)",
+      "Read(//tmp/**)"
+    ]
+  }
+}

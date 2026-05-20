@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>番茄时钟</title>
+<style>
+  :root {
+    --work: #e74c3c;
+    --short-break: #2ecc71;
+    --long-break: #3498db;
+    --bg: #1a1a2e;
+    --card: #16213e;
+    --text: #eee;
+    --muted: #888;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: var(--bg);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: var(--text);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .container {
+    text-align: center;
+    background: var(--card);
+    border-radius: 24px;
+    padding: 48px 40px 36px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    width: 380px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 32px;
+    letter-spacing: 2px;
+  }
+  .timer-wrapper {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin: 0 auto 28px;
+  }
+  .timer-wrapper svg { transform: rotate(-90deg); }
+  .progress-bg {
+    fill: none;
+    stroke: #2a2a4a;
+    stroke-width: 8;
+  }
+  .progress-fill {
+    fill: none;
+    stroke: var(--work);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.3s linear, stroke 0.4s;
+  }
+  .time-display {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .time-text {
+    font-size: 3.2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 2px;
+  }
+  .mode-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-top: 4px;
+    color: var(--muted);
+  }
+  .controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+  .btn {
+    padding: 12px 32px;
+    border: none;
+    border-radius: 28px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    letter-spacing: 1px;
+  }
+  .btn:active { transform: scale(0.95); }
+  .btn-start {
+    background: var(--work);
+    color: #fff;
+    min-width: 120px;
+  }
+  .btn-start:hover { box-shadow: 0 4px 20px rgba(231,76,60,0.4); }
+  .btn-reset {
+    background: transparent;
+    color: var(--muted);
+    border: 2px solid #333;
+  }
+  .btn-reset:hover { border-color: #555; color: #ccc; }
+  .btn-history {
+    background: transparent;
+    color: var(--muted);
+    border: 2px solid #333;
+    font-size: 0.85rem;
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-history:hover { border-color: #555; color: #ccc; }
+  .stats {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .stats .tomato { font-size: 1.1rem; }
+  .session-dots {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .session-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #2a2a4a;
+    transition: background 0.3s;
+  }
+  .session-dot.done { background: var(--work); }
+  .mode-tabs {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+  .mode-tab {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1px solid #333;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-tab.active {
+    background: #2a2a4a;
+    border-color: #555;
+    color: #fff;
+  }
+  .mode-tab:hover { border-color: #555; }
+
+  /* Modal overlay */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 32px 28px 24px;
+    width: 640px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    position: relative;
+  }
+  .modal-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .modal-close:hover { color: #fff; }
+  .modal h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+  }
+  .summary-cards {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .summary-card {
+    flex: 1;
+    background: #1e2d4a;
+    border-radius: 12px;
+    padding: 14px 12px;
+    text-align: center;
+  }
+  .summary-card .value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--work);
+  }
+  .summary-card .label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .chart-wrap {
+    position: relative;
+    background: #1e2d4a;
+    border-radius: 12px;
+    padding: 16px 12px 8px 8px;
+    margin-bottom: 16px;
+  }
+  .chart-wrap canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .day-list {
+    margin-top: 12px;
+  }
+  .day-list-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--muted);
+    padding: 0 8px 8px;
+    border-bottom: 1px solid #2a2a4a;
+    margin-bottom: 4px;
+  }
+  .day-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 8px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+  }
+  .day-row:hover { background: #1e2d4a; }
+  .day-row .date { color: var(--text); }
+  .day-row .mins { color: var(--muted); }
+  .day-row .bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: #2a2a4a;
+    border-radius: 3px;
+    margin: 0 12px;
+    overflow: hidden;
+  }
+  .day-row .bar-fill {
+    height: 100%;
+    background: var(--work);
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+  .empty-history {
+    text-align: center;
+    color: var(--muted);
+    padding: 40px 0;
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>番茄时钟</h1>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="work">工作</button>
+    <button class="mode-tab" data-mode="shortBreak">短休</button>
+    <button class="mode-tab" data-mode="longBreak">长休</button>
+  </div>
+
+  <div class="timer-wrapper">
+    <svg width="260" height="260" viewBox="0 0 260 260">
+      <circle class="progress-bg" cx="130" cy="130" r="116"/>
+      <circle class="progress-fill" id="progress" cx="130" cy="130" r="116"
+        stroke-dasharray="728.85" stroke-dashoffset="0"/>
+    </svg>
+    <div class="time-display">
+      <span class="time-text" id="timeText">25:00</span>
+      <span class="mode-label" id="modeLabel">工作中</span>
+    </div>
+  </div>
+
+  <div class="session-dots" id="sessionDots">
+    <span class="session-dot"></span>
+    <span class="session-dot"></span>
+    <span class="session-dot"></span>
+    <span class="session-dot"></span>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-start" id="btnStart">开始</button>
+    <button class="btn btn-reset" id="btnReset">重置</button>
+  </div>
+
+  <div class="stats">
+    <span class="tomato">🍅</span>
+    <span>已完成 <strong id="count">0</strong> 个番茄</span>
+  </div>
+  <button class="btn-history" id="btnHistory">📊 历史记录</button>
+</div>
+
+<!-- History Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">&times;</button>
+    <h2>学习历史</h2>
+
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="value" id="sumToday">0min</div>
+        <div class="label">今日学习</div>
+      </div>
+      <div class="summary-card">
+        <div class="value" id="sumWeek">0min</div>
+        <div class="label">本周学习</div>
+      </div>
+      <div class="summary-card">
+        <div class="value" id="sumTotal">0h</div>
+        <div class="label">总计学习</div>
+      </div>
+      <div class="summary-card">
+        <div class="value" id="sumStreak">0天</div>
+        <div class="label">连续打卡</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <canvas id="chartCanvas"></canvas>
+    </div>
+
+    <div class="day-list">
+      <div class="day-list-header">
+        <span>日期</span><span>时长</span>
+      </div>
+      <div id="dayList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CIRCUMFERENCE = 2 * Math.PI * 116;
+  const POMODORO_MINUTES = 25;
+
+  const DURATIONS = {
+    work: 25 * 60,
+    shortBreak: 5 * 60,
+    longBreak: 15 * 60,
+  };
+
+  const LABELS = {
+    work: '工作中',
+    shortBreak: '短休息',
+    longBreak: '长休息',
+  };
+
+  const THEME_COLORS = {
+    work: '#e74c3c',
+    shortBreak: '#2ecc71',
+    longBreak: '#3498db',
+  };
+
+  const state = {
+    mode: 'work',
+    remaining: DURATIONS.work,
+    total: DURATIONS.work,
+    running: false,
+    completedPomodoros: 0,
+    sessionsInRound: 0,
+    intervalId: null,
+  };
+
+  const $timeText = document.getElementById('timeText');
+  const $modeLabel = document.getElementById('modeLabel');
+  const $btnStart = document.getElementById('btnStart');
+  const $btnReset = document.getElementById('btnReset');
+  const $count = document.getElementById('count');
+  const $progress = document.getElementById('progress');
+  const $sessionDots = document.getElementById('sessionDots');
+  const $modeTabs = document.querySelectorAll('.mode-tab');
+  const $modalOverlay = document.getElementById('modalOverlay');
+  const $chartCanvas = document.getElementById('chartCanvas');
+
+  // ── History helpers ──────────────────────────────
+
+  function todayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function getHistory() {
+    try {
+      return JSON.parse(localStorage.getItem('pomodoro_history')) || {};
+    } catch (_) { return {}; }
+  }
+
+  function saveHistory(h) {
+    try {
+      localStorage.setItem('pomodoro_history', JSON.stringify(h));
+    } catch (_) {}
+  }
+
+  function recordPomodoro() {
+    const history = getHistory();
+    const key = todayKey();
+    history[key] = (history[key] || 0) + 1;
+    saveHistory(history);
+  }
+
+  // ── State persistence ────────────────────────────
+
+  function loadState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('pomodoro'));
+      if (saved) {
+        state.completedPomodoros = saved.completedPomodoros || 0;
+        state.sessionsInRound = saved.sessionsInRound || 0;
+        state.mode = saved.mode || 'work';
+        state.remaining = saved.remaining != null ? saved.remaining : DURATIONS[state.mode];
+        state.total = DURATIONS[state.mode];
+      }
+    } catch (_) {}
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem('pomodoro', JSON.stringify({
+        completedPomodoros: state.completedPomodoros,
+        sessionsInRound: state.sessionsInRound,
+        mode: state.mode,
+        remaining: state.remaining,
+      }));
+    } catch (_) {}
+  }
+
+  // ── Display ──────────────────────────────────────
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  function updateDisplay() {
+    $timeText.textContent = formatTime(state.remaining);
+    document.title = formatTime(state.remaining) + ' - ' + LABELS[state.mode];
+
+    const offset = CIRCUMFERENCE * (1 - state.remaining / state.total);
+    $progress.style.strokeDashoffset = offset;
+    $progress.style.stroke = THEME_COLORS[state.mode];
+
+    $modeLabel.textContent = LABELS[state.mode];
+    $modeLabel.style.color = THEME_COLORS[state.mode];
+    $btnStart.style.background = THEME_COLORS[state.mode];
+    $count.textContent = state.completedPomodoros;
+
+    $modeTabs.forEach(t => {
+      t.classList.toggle('active', t.dataset.mode === state.mode);
+    });
+
+    renderDots();
+  }
+
+  function renderDots() {
+    $sessionDots.innerHTML = '';
+    for (let i = 0; i < 4; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'session-dot' + (i < state.sessionsInRound ? ' done' : '');
+      $sessionDots.appendChild(dot);
+    }
+  }
+
+  // ── Timer logic ──────────────────────────────────
+
+  function switchMode(mode) {
+    state.mode = mode;
+    state.total = DURATIONS[mode];
+    state.remaining = DURATIONS[mode];
+    state.running = false;
+    clearInterval(state.intervalId);
+    state.intervalId = null;
+    $btnStart.textContent = '开始';
+    updateDisplay();
+    saveState();
+  }
+
+  function playSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.15);
+        osc.stop(ctx.currentTime + i * 0.15 + 0.3);
+      });
+    } catch (_) {}
+  }
+
+  function notify(title, body) {
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '🍅' });
+    }
+  }
+
+  function onTimerEnd() {
+    playSound();
+    clearInterval(state.intervalId);
+    state.intervalId = null;
+    state.running = false;
+    $btnStart.textContent = '开始';
+
+    if (state.mode === 'work') {
+      recordPomodoro();
+      state.completedPomodoros++;
+      state.sessionsInRound++;
+      if (state.sessionsInRound >= 4) {
+        state.sessionsInRound = 0;
+        state.mode = 'longBreak';
+        notify('番茄完成!', '已完成4个番茄，该长休息了~');
+      } else {
+        state.mode = 'shortBreak';
+        notify('番茄完成!', '休息一下吧~');
+      }
+    } else {
+      state.mode = 'work';
+      notify('休息结束!', '开始新的番茄吧~');
+    }
+
+    state.total = DURATIONS[state.mode];
+    state.remaining = DURATIONS[state.mode];
+    updateDisplay();
+    saveState();
+  }
+
+  function tick() {
+    if (state.remaining <= 0) {
+      onTimerEnd();
+      return;
+    }
+    state.remaining--;
+    updateDisplay();
+    saveState();
+  }
+
+  function toggleTimer() {
+    if (state.running) {
+      state.running = false;
+      clearInterval(state.intervalId);
+      state.intervalId = null;
+      $btnStart.textContent = '继续';
+    } else {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+      state.running = true;
+      state.intervalId = setInterval(tick, 1000);
+      $btnStart.textContent = '暂停';
+    }
+  }
+
+  function reset() {
+    state.running = false;
+    clearInterval(state.intervalId);
+    state.intervalId = null;
+    state.remaining = DURATIONS[state.mode];
+    state.total = DURATIONS[state.mode];
+    $btnStart.textContent = '开始';
+    updateDisplay();
+    saveState();
+  }
+
+  // ── Chart / History rendering ────────────────────
+
+  function getDateRange(days) {
+    const result = [];
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      result.push({
+        key,
+        label: (d.getMonth() + 1) + '/' + d.getDate(),
+        fullLabel: d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate(),
+        isToday: i === 0,
+        dayOfWeek: ['日','一','二','三','四','五','六'][d.getDay()],
+      });
+    }
+    return result;
+  }
+
+  function drawChart(days) {
+    const canvas = $chartCanvas;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth;
+    const H = 240;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const history = getHistory();
+    const pad = { top: 16, right: 24, bottom: 36, left: 44 };
+    const pw = W - pad.left - pad.right;
+    const ph = H - pad.top - pad.bottom;
+
+    const points = days.map((d, i) => ({
+      x: pad.left + (i / (days.length - 1 || 1)) * pw,
+      y: 0,
+      count: history[d.key] || 0,
+      mins: (history[d.key] || 0) * POMODORO_MINUTES,
+      ...d,
+    }));
+
+    const maxMins = Math.max(25, ...points.map(p => p.mins));
+    const yMax = Math.ceil(maxMins / 25) * 25 + 25;
+
+    points.forEach(p => {
+      p.y = pad.top + ph - (p.mins / yMax) * ph;
+    });
+
+    // Grid lines
+    ctx.strokeStyle = '#2a2a4a';
+    ctx.lineWidth = 1;
+    const gridLines = 5;
+    for (let i = 0; i <= gridLines; i++) {
+      const y = pad.top + (ph / gridLines) * i;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, y);
+      ctx.lineTo(W - pad.right, y);
+      ctx.stroke();
+
+      const label = Math.round(yMax - (yMax / gridLines) * i);
+      ctx.fillStyle = '#666';
+      ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(label + 'min', pad.left - 8, y + 4);
+    }
+
+    // X axis labels
+    const labelStep = days.length > 7 ? 2 : 1;
+    points.forEach((p, i) => {
+      if (i % labelStep !== 0 && i !== points.length - 1) return;
+      ctx.fillStyle = p.isToday ? '#e74c3c' : '#666';
+      ctx.font = (p.isToday ? 'bold ' : '') + '11px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.label, p.x, H - 6);
+    });
+
+    if (points.length === 0) return;
+
+    // Gradient fill
+    const gradient = ctx.createLinearGradient(0, pad.top, 0, pad.top + ph);
+    gradient.addColorStop(0, 'rgba(231,76,60,0.25)');
+    gradient.addColorStop(1, 'rgba(231,76,60,0.01)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, pad.top + ph);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(points[points.length - 1].x, pad.top + ph);
+    ctx.closePath();
+    ctx.fill();
+
+    // Line
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.stroke();
+
+    // Dots
+    points.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.isToday ? 5 : 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = p.isToday ? '#e74c3c' : '#16213e';
+      ctx.fill();
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      if (p.mins > 0) {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 10px "Segoe UI", system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.mins + 'm', p.x, p.y - 12);
+      }
+    });
+  }
+
+  function renderHistorySummary() {
+    const history = getHistory();
+    const today = todayKey();
+    const days = getDateRange(14);
+
+    const todayMins = (history[today] || 0) * POMODORO_MINUTES;
+
+    // This week (Mon-Sun)
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    let weekMins = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + mondayOffset + i);
+      const key = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      weekMins += (history[key] || 0) * POMODORO_MINUTES;
+    }
+
+    // Total
+    let totalMins = 0;
+    Object.values(history).forEach(v => { totalMins += v * POMODORO_MINUTES; });
+    const totalHours = (totalMins / 60).toFixed(1);
+
+    // Streak (consecutive days from today going backwards)
+    let streak = 0;
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      if ((history[key] || 0) > 0) {
+        streak++;
+      } else if (i > 0) {
+        break;
+      }
+    }
+
+    document.getElementById('sumToday').textContent = todayMins + 'min';
+    document.getElementById('sumWeek').textContent = weekMins + 'min';
+    document.getElementById('sumTotal').textContent = totalHours + 'h';
+    document.getElementById('sumStreak').textContent = streak + '天';
+  }
+
+  function renderDayList() {
+    const history = getHistory();
+    const days = getDateRange(14);
+    const maxMins = Math.max(1, ...days.map(d => (history[d.key] || 0) * POMODORO_MINUTES));
+
+    const container = document.getElementById('dayList');
+    container.innerHTML = '';
+
+    const reversed = [...days].reverse();
+    reversed.forEach(d => {
+      const mins = (history[d.key] || 0) * POMODORO_MINUTES;
+      const barPct = maxMins > 0 ? (mins / maxMins) * 100 : 0;
+
+      const row = document.createElement('div');
+      row.className = 'day-row';
+      row.innerHTML =
+        '<span class="date">' + d.fullLabel + ' 周' + d.dayOfWeek + '</span>' +
+        '<div class="bar-wrap"><div class="bar-fill" style="width:' + barPct + '%"></div></div>' +
+        '<span class="mins">' + mins + 'min</span>';
+      container.appendChild(row);
+    });
+  }
+
+  function openHistory() {
+    drawChart(getDateRange(14));
+    renderHistorySummary();
+    renderDayList();
+    $modalOverlay.classList.add('open');
+  }
+
+  function closeHistory() {
+    $modalOverlay.classList.remove('open');
+  }
+
+  // ── Event listeners ──────────────────────────────
+
+  $btnStart.addEventListener('click', toggleTimer);
+  $btnReset.addEventListener('click', reset);
+  document.getElementById('btnHistory').addEventListener('click', openHistory);
+  document.getElementById('modalClose').addEventListener('click', closeHistory);
+  $modalOverlay.addEventListener('click', function(e) {
+    if (e.target === $modalOverlay) closeHistory();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeHistory();
+    if ($modalOverlay.classList.contains('open')) return;
+    if (e.code === 'Space') { e.preventDefault(); toggleTimer(); }
+    if (e.code === 'KeyR') reset();
+  });
+
+  $modeTabs.forEach(tab => {
+    tab.addEventListener('click', () => switchMode(tab.dataset.mode));
+  });
+
+  // Redraw chart on resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if ($modalOverlay.classList.contains('open')) {
+        drawChart(getDateRange(14));
+      }
+    }, 150);
+  });
+
+  // ── Init ─────────────────────────────────────────
+
+  loadState();
+  state.total = DURATIONS[state.mode];
+  if (state.remaining > state.total) state.remaining = state.total;
+  updateDisplay();
+</script>
+</body>
+</html>
